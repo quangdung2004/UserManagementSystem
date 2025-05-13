@@ -1,6 +1,7 @@
 package com.example.usermngsystem.security;
 
 import io.jsonwebtoken.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -36,6 +37,8 @@ public class JwtUtils {
             return false;
         }
     }
+
+
     public String generateToken(Authentication authentication) {
         UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
         return generateJwt(userPrincipal.getUsername());

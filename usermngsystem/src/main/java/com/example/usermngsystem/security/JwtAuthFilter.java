@@ -75,13 +75,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
-        if (token == null) {
-            System.out.println("Không tìm thấy token trong header Authorization");
-        } else if (username == null) {
-            System.out.println("Không lấy được username từ token");
-        } else if (!jwtUtils.validateJwt(token)) {
-            System.out.println("Token không hợp lệ hoặc hết hạn");
-        }
+//        if (token == null) {
+//            System.out.println("Không tìm thấy token trong header Authorization");
+//        } else if (username == null) {
+//            System.out.println("Không lấy được username từ token");
+//        } else if (!jwtUtils.validateJwt(token)) {
+//            System.out.println("Token không hợp lệ hoặc hết hạn");
+//        }
 
     }
 }

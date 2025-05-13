@@ -27,7 +27,7 @@ public class RoleController {
         return ResponseEntity.ok(roleService.deleteRole(name));
     }
 
-    @PostMapping("/roles")
+    @PostMapping("/add_roles")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> createRole(@Valid @RequestBody Role role) {
         Role savedRole = roleService.createRole(role);

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -27,6 +28,15 @@ public class User {
 
     @Column(unique = true)
     String email;
+
+    @Column(name = "failed_attempts")
+    private Integer failedLoginAttempts;
+
+    @Column(name = "locked_until")
+    private LocalDateTime accountLockedUntil;
+
+    @Column(name = "account_expired_at")
+    private LocalDateTime accountExpiredAt;
 
     //Quan hệ nhiều-nhiều với bảng Role
     @ManyToMany(fetch = FetchType.EAGER)

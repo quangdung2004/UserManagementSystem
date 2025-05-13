@@ -2,7 +2,10 @@ package com.example.usermngsystem.service;
 
 import com.example.usermngsystem.entity.Role;
 import com.example.usermngsystem.entity.User;
+import com.example.usermngsystem.exception.DuplicatedResourceException;
+import com.example.usermngsystem.exception.ResourceNotFoundException;
 import com.example.usermngsystem.payload.*;
+import com.example.usermngsystem.repository.LoginLogRepository;
 import com.example.usermngsystem.repository.RoleRepository;
 import com.example.usermngsystem.repository.UserRepository;
 import com.example.usermngsystem.security.UserDetailsImpl;
@@ -13,7 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -23,13 +28,14 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final LoginLogRepository loginLogRepository;
     private final PasswordEncoder passwordEncoder;
 
     public String updateUserRoles(String username, RoleRequest request) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not exist"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not exist"));
         Role role = roleRepository.findByName(request.getName())
-                .orElseThrow(() -> new RuntimeException("Role '" + request.getName() + "' not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Role '" + request.getName() + "' not found"));
 
         user.getRoles().add(role);
         userRepository.save(user);
@@ -38,9 +44,9 @@ public class UserService {
 
     public String removeUserRole(String username, RemoveUserRoleRequest request) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Role role = roleRepository.findByName(request.getName())
-                .orElseThrow(() -> new RuntimeException("Role '" + request.getName() + "' not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Role '" + request.getName() + "' not found"));
 
         if (!user.getRoles().contains(role)) {
             throw new RuntimeException("User does not have role '" + role.getName() + "'");
@@ -53,12 +59,12 @@ public class UserService {
 
     public User getCurrentUser(UserDetailsImpl userDetails) {
         return userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
     public String updateMyInfo(UserDetailsImpl userDetails, UpdateUserRequest request) {
         User user = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
@@ -75,6 +81,7 @@ public class UserService {
             UserResponse dto = new UserResponse();
             dto.setUsername(user.getUsername());
             dto.setEmail(user.getEmail());
+            dto.setAccountExpiredAt(user.getAccountExpiredAt());
             dto.setRoles(user.getRoles()
                     .stream()
                     .map(Role::getName)
@@ -93,28 +100,29 @@ public class UserService {
 
     public String createUserByAdmin(CreateUserRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Username already exists");
+            throw new DuplicatedResourceException("Username already exists");
         }
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new DuplicatedResourceException("Email already exists");
         }
 
         User user = new User();
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setEmail(request.getEmail());
+        user.setAccountExpiredAt(LocalDateTime.now().plusYears(1));
 
         Set<String> roleNames = request.getRoles();
         Set<Role> roles = new HashSet<>();
 
         if (roleNames == null || roleNames.isEmpty()) {
             Role defaultRole = roleRepository.findByName("USER")
-                    .orElseThrow(() -> new RuntimeException("Default role USER not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Default role USER not found"));
             roles.add(defaultRole);
         } else {
             for (String roleName : roleNames) {
                 Role role = roleRepository.findByName(roleName)
-                        .orElseThrow(() -> new RuntimeException("Role '" + roleName + "' not found"));
+                        .orElseThrow(() -> new ResourceNotFoundException("Role '" + roleName + "' not found"));
                 roles.add(role);
             }
         }
@@ -124,12 +132,32 @@ public class UserService {
         return "User created successfully with roles: " + roles.stream().map(Role::getName).toList();
     }
 
+    @Transactional
     public String deleteUser(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        loginLogRepository.deleteByUser(user);
 
         userRepository.delete(user);
         return "User '" + username + "' deleted successfully";
+    }
+
+    @Transactional
+    public String renewAccount(RenewAccountRequest request) {
+
+        User user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found!"));
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime currentExpired = user.getAccountExpiredAt() != null ? user.getAccountExpiredAt() : now;
+        LocalDateTime newExpired = currentExpired.isAfter(now)
+                ? currentExpired.plusYears(request.getYearsToExtends()) : now.plusYears(request.getYearsToExtends());
+
+        user.setAccountExpiredAt(newExpired);
+        userRepository.save(user);
+
+        return "User '" + request.getUsername() + "' has been extended to " + newExpired;
+
     }
 }
 

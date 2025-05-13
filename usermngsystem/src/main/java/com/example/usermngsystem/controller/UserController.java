@@ -1,9 +1,6 @@
 package com.example.usermngsystem.controller;
 
-import com.example.usermngsystem.payload.CreateUserRequest;
-import com.example.usermngsystem.payload.RemoveUserRoleRequest;
-import com.example.usermngsystem.payload.RoleRequest;
-import com.example.usermngsystem.payload.UpdateUserRequest;
+import com.example.usermngsystem.payload.*;
 import com.example.usermngsystem.security.UserDetailsImpl;
 import com.example.usermngsystem.service.UserService;
 import jakarta.validation.Valid;
@@ -69,5 +66,13 @@ public class UserController {
     public ResponseEntity<?> deleteUser(@PathVariable String username) {
         return ResponseEntity.ok(userService.deleteUser(username));
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/users/renew")
+    public ResponseEntity<?> renewAccount(@RequestBody RenewAccountRequest request) {
+        //String message = userService.renewAccount(request);
+        return ResponseEntity.ok(userService.renewAccount(request));
+    }
+
 }
 

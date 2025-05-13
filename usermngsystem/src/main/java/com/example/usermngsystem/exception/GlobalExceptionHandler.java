@@ -3,6 +3,9 @@ package com.example.usermngsystem.exception;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AccountExpiredException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,16 +30,40 @@ public class GlobalExceptionHandler {
     public ResponseEntity<String> handleConstraintViolation(ConstraintViolationException ex) {
         return ResponseEntity.badRequest().body(ex.getMessage());
     }
-
-    // Runtime
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<String> handleRuntime(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal error: " + ex.getMessage());
+    @ExceptionHandler(DuplicatedResourceException.class)
+    public ResponseEntity<?> handleDuplicateResource(DuplicatedResourceException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
     }
 
-    // Exception chung
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<?> handleResourceNotFound(ResourceNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<?> handleBadCredentials(BadCredentialsException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ex.getMessage());
+    }
+
+    @ExceptionHandler(LockedException.class)
+    public ResponseEntity<?> handleLocked(LockedException ex) {
+        return ResponseEntity.status(HttpStatus.LOCKED).body(ex.getMessage());
+    }
+
+    @ExceptionHandler(AccountExpiredException.class)
+    public ResponseEntity<?> handleAccountExpired(AccountExpiredException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ex.getMessage());
+    }
+
+    @ExceptionHandler(BlacklistedTokenException.class)
+    public ResponseEntity<?> handleBlacklistedToken(BlacklistedTokenException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ex.getMessage());
+    }
+
+    // Fallback handler
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<String> handleAll(Exception ex) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Unexpected error: " + ex.getMessage());
+    public ResponseEntity<?> handleException(Exception ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred: " + ex.getMessage());
     }
+
 }
